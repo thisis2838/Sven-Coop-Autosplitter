@@ -130,7 +130,8 @@ init // Version specific
 
     entListSig.OnFound = (proc, scanner, ptr) => !proc.ReadPointer(ptr, out ptr) ? IntPtr.Zero : ptr;
 
-	var pStringBaseSig = new SigScanTarget(2, 
+	var pStringBaseSig = new SigScanTarget(8, 
+		"8b ?? ?? ?? ?? ??",
 		"03 ?? ?? ?? ?? ??", // ADD EAX,dword ptr [0x06cf03ac]
 		"??",
 		"68 ?? ?? ?? ??",
@@ -153,8 +154,8 @@ init // Version specific
 		"d9 ?? ?? ?? ?? ??"); // FSTP dword ptr [gpGlobals]
 
 	// alternatives, needs 2 sigs but might be more reliable?
-	// D9 1D ?? ?? ?? ?? FF 15 ?? ?? ?? ?? D9 EE
-	// D9 1D ?? ?? ?? ?? ?? FF 15 ?? ?? ?? ?? D9 EE
+	globalSig.AddSignature(2, "D9 1D ?? ?? ?? ?? FF 15 ?? ?? ?? ?? D9 EE");
+	globalSig.AddSignature(2, "D9 1D ?? ?? ?? ?? ?? FF 15 ?? ?? ?? ?? D9 EE");
 
     globalSig.OnFound = (proc, scanner, ptr) => !proc.ReadPointer(ptr, out ptr) ? IntPtr.Zero : ptr;
 
@@ -330,48 +331,59 @@ init // Version specific
 	// 2838: this is for special actions that should only be done on game load
 	// i would've used actions to clean this up but they don't allow ref unfortunately
 	Action OnSessionStart = () => {
-		if (vars.map.Current == "hl_c17")
+		string map = vars.map.Current;
+		switch (map)
 		{
-			vars.nihiHP.Reset();
-			IntPtr nihiPtr = FindEntByNameProperty("targetname","nihilanth");
-			vars.nihiHP = new MemoryWatcher<float>((nihiPtr == IntPtr.Zero) ? IntPtr.Zero : (nihiPtr + (int)vars.entVarsOffs["health"]));
-			vars.watchList.Add(vars.nihiHP);
+			case "hl_c17":
+			{
+				vars.nihiHP.Reset();
+				IntPtr nihiPtr = FindEntByNameProperty("targetname","nihilanth");
+				vars.nihiHP = new MemoryWatcher<float>((nihiPtr == IntPtr.Zero) ? IntPtr.Zero : (nihiPtr + (int)vars.entVarsOffs["health"]));
+				vars.watchList.Add(vars.nihiHP);
+				break;
+			}
+			case "th_ep3_07":
+			{
+				vars.thep3bosshealth.Reset();
+				IntPtr thep3bossPtr = FindEntByNameProperty("targetname","sheriffs_chppr2");
+				vars.thep3bosshealth = new MemoryWatcher<float>((thep3bossPtr == IntPtr.Zero) ? IntPtr.Zero : (thep3bossPtr + (int)vars.entVarsOffs["health"]));
+				vars.watchList.Add(vars.thep3bosshealth);
+				break;
+			}
+			case "uplink":
+			{
+				vars.uplinkVentHealth.Reset();
+				IntPtr uplinkVentHealthPtr = FindEntByNameProperty("targetname","garg_vent_break");
+				vars.uplinkVentHealth = new MemoryWatcher<float>((uplinkVentHealthPtr == IntPtr.Zero) ? IntPtr.Zero : (uplinkVentHealthPtr + (int)vars.entVarsOffs["health"]));
+				vars.watchList.Add(vars.uplinkVentHealth);
+				break;
+			}
+			case "th_ep2_04":
+			{
+				vars.thep2ValveAngle.Reset();
+				IntPtr thep2ValveAnglePtr = FindEntByNameProperty("target", "oil_spouts1_mm");
+				vars.thep2ValveAngle = new MemoryWatcher<float>((thep2ValveAnglePtr == IntPtr.Zero) ? IntPtr.Zero : (thep2ValveAnglePtr + (int)vars.entVarsOffs["avelocityZ"]));
+				vars.watchList.Add(vars.thep2ValveAngle);
+				break;
+			}
+			case "of6a4b":
+			{
+				IntPtr op4ButtonFrameratePtr = FindEntByNameProperty("target", "endrelay");
+				vars.op4ButtonFramerate.Reset();
+				vars.op4ButtonFramerate = new MemoryWatcher<float>((op4ButtonFrameratePtr == IntPtr.Zero) ? IntPtr.Zero : (op4ButtonFrameratePtr + (int)vars.entVarsOffs["framerate"]));
+				vars.watchList.Add(vars.op4ButtonFramerate);
+				break;
+			}
+			case "th_ep1_05":
+			{
+				IntPtr thep1MMPtr = FindEntByNameProperty("targetname", "stairscene_mngr");
+				vars.thep1MMThinkTime.Reset();
+				vars.thep1MMThinkTime = new MemoryWatcher<float>((thep1MMPtr == IntPtr.Zero) ? IntPtr.Zero : (thep1MMPtr + (int)vars.entVarsOffs["nextthink"]));
+				vars.watchList.Add(vars.thep1MMThinkTime);
+				break;
+			}
 		}
-		else if (vars.map.Current == "th_ep3_07")
-		{
-			vars.thep3bosshealth.Reset();
-			IntPtr thep3bossPtr = FindEntByNameProperty("targetname","sheriffs_chppr2");
-			vars.thep3bosshealth = new MemoryWatcher<float>((thep3bossPtr == IntPtr.Zero) ? IntPtr.Zero : (thep3bossPtr + (int)vars.entVarsOffs["health"]));
-			vars.watchList.Add(vars.thep3bosshealth);
-		}
-		else if (vars.map.Current == "uplink")
-		{
-			vars.uplinkVentHealth.Reset();
-			IntPtr uplinkVentHealthPtr = FindEntByNameProperty("targetname","garg_vent_break");
-			vars.uplinkVentHealth = new MemoryWatcher<float>((uplinkVentHealthPtr == IntPtr.Zero) ? IntPtr.Zero : (uplinkVentHealthPtr + (int)vars.entVarsOffs["health"]));
-			vars.watchList.Add(vars.uplinkVentHealth);
-		}
-		else if (vars.map.Current == "th_ep2_04")
-		{
-			vars.thep2ValveAngle.Reset();
-			IntPtr thep2ValveAnglePtr = FindEntByNameProperty("target", "oil_spouts1_mm");
-			vars.thep2ValveAngle = new MemoryWatcher<float>((thep2ValveAnglePtr == IntPtr.Zero) ? IntPtr.Zero : (thep2ValveAnglePtr + (int)vars.entVarsOffs["avelocityZ"]));
-			vars.watchList.Add(vars.thep2ValveAngle);
-		}
-		else if (vars.map.Current == "of6a4b")
-		{
-			IntPtr op4ButtonFrameratePtr = FindEntByNameProperty("target", "endrelay");
-			vars.op4ButtonFramerate.Reset();
-			vars.op4ButtonFramerate = new MemoryWatcher<float>((op4ButtonFrameratePtr == IntPtr.Zero) ? IntPtr.Zero : (op4ButtonFrameratePtr + (int)vars.entVarsOffs["framerate"]));
-			vars.watchList.Add(vars.op4ButtonFramerate);
-		}
-		else if (vars.map.Current == "th_ep1_05")
-		{
-			IntPtr thep1MMPtr = FindEntByNameProperty("targetname", "stairscene_mngr");
-			vars.thep1MMThinkTime.Reset();
-			vars.thep1MMThinkTime = new MemoryWatcher<float>((thep1MMPtr == IntPtr.Zero) ? IntPtr.Zero : (thep1MMPtr + (int)vars.entVarsOffs["nextthink"]));
-			vars.watchList.Add(vars.thep1MMThinkTime);
-		}
+
 
 		vars.watchList.UpdateAll(game);
 	};
@@ -398,13 +410,17 @@ start // Start splitter
 		!vars.CheckWithinBoundsXY(vars.playerX.Current, vars.playerY.Current, -2160f, -1807f, 1990f, 2500f))
 	|| (settings["Autostart"] && vars.loading.Current == 0 && vars.loading.Old == 1 && vars.startmaps.Contains(vars.map.Current))
 	|| (settings["AutostartILs"] && vars.loading.Current == 0 && vars.loading.Old == 1))
+	{
 		return true;
+	}
 }
 
 reset // Reset splitter
 {
 	if (settings["Reset"] && vars.loading.Current == 0 && vars.loading.Old == 1 && vars.startmaps.Contains(vars.map.Current))
+	{
 		return true;
+	}
 }
 
 split // Auto-splitter
